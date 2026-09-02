@@ -9,6 +9,15 @@ function mockDb(queryImpl) {
 }
 
 describe('requisition-service list functions', () => {
+  test('listRequisitions returns empty list when no rows exist', async () => {
+    const db = mockDb(() => ({ rows: [] }));
+
+    const result = await listRequisitions(db);
+
+    expect(result).toEqual([]);
+    expect(db.query).toHaveBeenCalledWith(expect.stringContaining('ORDER BY created_at DESC'));
+  });
+
   test('listRequisitions returns mapped header fields', async () => {
     const db = mockDb(() => ({
       rows: [
@@ -109,5 +118,51 @@ describe('requisition-service list functions', () => {
     expect(result.openLines).toHaveLength(1);
     expect(result.openLines[0].id).toBe('l-1');
     expect(result.openLines[0].qtyOpenForPo).toBe(3);
+  });
+
+  test('getRequisitionOpenLines maps numeric strings for frontend totals', async () => {
+    let call = 0;
+    const db = mockDb((sql, params) => {
+      call += 1;
+      expect(params).toEqual(['pr-1']);
+
+      if (call === 1) {
+        return {
+          rows: [{ id: 'pr-1', status: 'APPROVED', pr_number: 'PR-2026-0001' }],
+          rowCount: 1,
+        };
+      }
+
+      expect(sql).toContain('ORDER BY line_no ASC');
+      return {
+        rows: [
+          {
+            id: 'l-1',
+            line_no: 1,
+            item_code: 'ITEM-001',
+            item_name: 'Bearing-6205',
+            qty_requested: '20.00',
+            qty_allocated: '5.00',
+            qty_received: '0.00',
+            uom: 'PCS',
+            est_unit_price: '150000.00',
+            site_code: 'JKT',
+            required_date: '2026-09-18',
+            budget_center: 'OPS',
+          },
+        ],
+        rowCount: 1,
+      };
+    });
+
+    const result = await getRequisitionOpenLines(db, 'pr-1');
+
+    expect(result.openLines[0]).toMatchObject({
+      qtyRequested: 20,
+      qtyAllocated: 5,
+      qtyReceived: 0,
+      qtyOpenForPo: 15,
+      estUnitPrice: 150000,
+    });
   });
 });

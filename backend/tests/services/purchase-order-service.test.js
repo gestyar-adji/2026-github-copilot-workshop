@@ -439,6 +439,17 @@ describe('submitPurchaseOrder – status transition', () => {
 });
 
 describe('purchase-order-service list functions', () => {
+  test('listPurchaseOrders returns empty list when no rows exist', async () => {
+    const db = {
+      query: jest.fn(() => ({ rows: [] })),
+    };
+
+    const result = await listPurchaseOrders(db);
+
+    expect(result).toEqual([]);
+    expect(db.query).toHaveBeenCalledWith(expect.stringContaining('ORDER BY created_at DESC'));
+  });
+
   test('listPurchaseOrders returns mapped header fields', async () => {
     const db = {
       query: jest.fn(() => ({
@@ -531,5 +542,50 @@ describe('purchase-order-service list functions', () => {
     expect(result.openLines).toHaveLength(1);
     expect(result.openLines[0].id).toBe('po-line-1');
     expect(result.openLines[0].qtyOpenForGr).toBe(6);
+  });
+
+  test('getOpenPoLines maps numeric strings for frontend open quantities', async () => {
+    let call = 0;
+    const db = {
+      query: jest.fn((sql, params) => {
+        call += 1;
+        expect(params).toEqual(['po-1']);
+
+        if (call === 1) {
+          return {
+            rows: [{ id: 'po-1', po_number: 'PO-2026-0001', status: 'SUBMITTED' }],
+            rowCount: 1,
+          };
+        }
+
+        expect(sql).toContain('ORDER BY line_no ASC');
+        return {
+          rows: [
+            {
+              id: 'po-line-1',
+              line_no: 1,
+              item_code: 'ITEM-001',
+              item_name: 'Bearing-6205',
+              qty_ordered: '10.00',
+              qty_received: '4.00',
+              uom: 'PCS',
+              unit_price: '150000.00',
+              site_code: 'JKT',
+              required_date: '2026-09-18',
+            },
+          ],
+          rowCount: 1,
+        };
+      }),
+    };
+
+    const result = await getOpenPoLines(db, 'po-1');
+
+    expect(result.openLines[0]).toMatchObject({
+      qtyOrdered: 10,
+      qtyReceived: 4,
+      qtyOpenForGr: 6,
+      unitPrice: 150000,
+    });
   });
 });
