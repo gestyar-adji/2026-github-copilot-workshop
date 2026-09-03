@@ -12,6 +12,13 @@
       </div>
       <div class="btn-group" v-if="purchaseOrder">
         <button v-if="purchaseOrder.status === 'DRAFT'" class="btn btn-primary" @click="submitPurchaseOrder">Submit PO</button>
+        <RouterLink
+          v-if="purchaseOrder.status === 'SUBMITTED' && purchaseOrder.lines.some((line) => line.qtyOpenForGr > 0)"
+          to="/goods-receipts/new"
+          class="btn btn-primary"
+        >
+          Create Goods Receipt
+        </RouterLink>
       </div>
     </div>
 
