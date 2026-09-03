@@ -40,11 +40,13 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue';
-import { RouterLink } from 'vue-router';
+import { computed, onMounted, reactive, ref } from 'vue';
+import { RouterLink, useRouter } from 'vue-router';
+import { api } from '../api';
 import LineAllocationTable from '../components/LineAllocationTable.vue';
 import PurchaseOrderHeaderForm from '../components/PurchaseOrderHeaderForm.vue';
 
+const router = useRouter();
 const errorMessage = ref('');
 const successMessage = ref('');
 
@@ -56,61 +58,60 @@ const header = ref({
   notes: '',
 });
 
-const allocationLines = reactive([
-  {
-    prLineId: 'sample-pr-line-1',
-    prNumber: 'PR-001',
-    prLineNo: 1,
-    itemCode: 'ITEM-001',
-    itemName: 'Bearing-6205',
-    qtyRequested: 20,
-    qtyAllocated: 5,
-    remainingQty: 15,
-    qtyOrdered: 10,
-    uom: 'PCS',
-    deliveryAddress: '',
-    deliveryDate: '',
-    unitPrice: 150000,
-    selected: true,
-  },
-  {
-    prLineId: 'sample-pr-line-2',
-    prNumber: 'PR-001',
-    prLineNo: 2,
-    itemCode: 'ITEM-009',
-    itemName: 'Grease High Temp',
-    qtyRequested: 12,
-    qtyAllocated: 0,
-    remainingQty: 12,
-    qtyOrdered: 0,
-    uom: 'TUBE',
-    deliveryAddress: '',
-    deliveryDate: '',
-    unitPrice: 0,
-    selected: true,
-  },
-  {
-    prLineId: 'sample-pr-line-3',
-    prNumber: 'PR-004',
-    prLineNo: 1,
-    itemCode: 'ITEM-015',
-    itemName: 'Bearing-6205',
-    qtyRequested: 50,
-    qtyAllocated: 10,
-    remainingQty: 40,
-    qtyOrdered: 20,
-    uom: 'PAIR',
-    deliveryAddress: '',
-    deliveryDate: '',
-    unitPrice: 32000,
-    selected: true,
-  },
-]);
+const allocationLines = reactive([]);
 
 const selectedLines = computed(() => allocationLines.filter((line) => line.selected));
 const totalAmount = computed(() =>
   selectedLines.value.reduce((sum, line) => sum + Number(line.qtyOrdered || 0) * Number(line.unitPrice || 0), 0)
 );
+
+function normalizeOpenLine(line, prNumber) {
+  const remainingQty = Number(line.qtyOpenForPo ?? line.remainingQty ?? 0);
+xxxx
+  return {
+    id: line.id,xxx
+    prLineId: line.prLineId || line.id,
+    prNumber: prNumber || line.prNumber,
+    prLineNo: line.lineNo ?? line.prLineNo ?? 1,
+    itemCode: line.itemCode,
+    itemName: line.itemName,
+    qtyRequested: Number(line.qtyRequested || 0),
+    qtyAllocated: Number(line.qtyAllocated || 0),
+    remainingQty,
+    qtyOrdered: Number(line.qtyOrdered || 0),
+    uom: line.uom,
+    deliveryAddress: '',
+    deliveryDate: '',
+    unitPrice: Number(line.unitPrice || 0),
+    siteCode: line.siteCode,
+    selected: Boolean(line.selected ?? true),
+  };
+}
+
+async function loadApprovedPrOpenLines() {
+  try {
+    errorMessage.value = '';
+    const requisitions = await api.listRequisitions();
+    const approved = (requisitions.items || []).filter((item) => item.status === 'APPROVED');
+
+    const allLines = [];
+    for (const requisition of approved) {
+      const payload = await api.getRequisitionOpenLines(requisition.id);
+      const openLines = (payload?.openLines || []).map((line) =>
+        normalizeOpenLine(line, payload?.requisition?.prNumber || requisition.prNumber)
+      );
+      allLines.push(...openLines);
+    }
+
+    allocationLines.splice(0, allocationLines.length, ...allLines);
+
+    if (allocationLines.length === 0) {
+      errorMessage.value = 'No approved PR open lines are available for PO creation.';
+    }
+  } catch (error) {
+    errorMessage.value = error.message;
+  }
+}
 
 function validateForm() {
   if (!header.value.vendorName.trim()) {
@@ -132,7 +133,23 @@ function validateForm() {
   return '';
 }
 
-function handleSubmit() {
+function buildPurchaseOrderPayload() {
+  return {
+    vendorName: header.value.vendorName.trim(),
+    lines: selectedLines.value.map((line) => ({
+      prLineId: line.prLineId,
+      itemCode: line.itemCode,
+      itemName: line.itemName,
+      qtyOrdered: Number(line.qtyOrdered),
+      uom: line.uom,
+      unitPrice: Number(line.unitPrice || 0),
+      siteCode: line.siteCode,
+      requiredDate: line.deliveryDate || null,
+    })),
+  };
+}
+
+async function submitPurchaseOrder() {
   errorMessage.value = '';
   successMessage.value = '';
 
@@ -142,16 +159,29 @@ function handleSubmit() {
     return;
   }
 
-  successMessage.value = 'Draft purchase order structure is ready for API integration.';
+  try {
+    const payload = buildPurchaseOrderPayload();
+    const created = await api.createPurchaseOrder(payload);
+    successMessage.value = `Purchase order ${created.poNumber || created.id} created successfully.`;
+    await router.push(`/purchase-orders/${created.id}`);
+  } catch (error) {
+    errorMessage.value = error.message || 'Unable to create purchase order.';
+  }
 }
 
-function handleSubmitPo() {
-  handleSubmit();
+async function handleSubmit() {
+  await submitPurchaseOrder();
+}
+
+async function handleSubmitPo() {
+  await submitPurchaseOrder();
 }
 
 function formatMoney(value) {
   return Number(value || 0).toLocaleString('en-US');
 }
+
+onMounted(loadApprovedPrOpenLines);
 </script>
 
 <style scoped>
