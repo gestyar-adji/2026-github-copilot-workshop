@@ -5,7 +5,7 @@
       <nav>
         <RouterLink to="/" :class="{ active: isDashboard }">Dashboard</RouterLink>
         <RouterLink to="/requisitions" :class="{ active: isRequisitions }">Purchase Requisitions</RouterLink>
-        <RouterLink to="/purchase-orders/new" :class="{ active: isPurchaseOrders }">Purchase Orders</RouterLink>
+        <RouterLink to="/purchase-orders" :class="{ active: isPurchaseOrders }">Purchase Orders</RouterLink>
       </nav>
     </header>
 

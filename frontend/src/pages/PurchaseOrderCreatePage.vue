@@ -67,9 +67,9 @@ const totalAmount = computed(() =>
 
 function normalizeOpenLine(line, prNumber) {
   const remainingQty = Number(line.qtyOpenForPo ?? line.remainingQty ?? 0);
-xxxx
+
   return {
-    id: line.id,xxx
+    id: line.id,
     prLineId: line.prLineId || line.id,
     prNumber: prNumber || line.prNumber,
     prLineNo: line.lineNo ?? line.prLineNo ?? 1,

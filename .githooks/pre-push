@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+set -eu
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+echo "Running pre-push tests..."
+if ! npm test; then
+  echo "Pre-push tests failed. Push blocked."
+  exit 1
+fi
+
+echo "Pre-push tests passed."
