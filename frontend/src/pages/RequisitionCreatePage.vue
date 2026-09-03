@@ -152,6 +152,8 @@ async function handleSubmit() {
   border-radius: var(--radius-input);
   font-family: inherit;
   font-size: 13px;
+  background: var(--surface);
+  color: var(--text);
 }
 .card-panel table input:focus {
   border-color: var(--primary);
