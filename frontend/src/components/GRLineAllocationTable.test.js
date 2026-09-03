@@ -1,4 +1,4 @@
-import { describe, test, expect } from '@jest/globals';
+import { describe, test, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
 import GRLineAllocationTable from './GRLineAllocationTable.vue';
 
@@ -101,8 +101,7 @@ describe('GRLineAllocationTable.vue', () => {
 
     // Try to set qty above max
     await qtyInput.setValue(lines[0].qtyOpenForGr + 1);
-    qtyInput.element.blur();
-    await wrapper.vm.$nextTick();
+    await qtyInput.trigger('blur');
 
     const errorText = wrapper.find('.error-text');
     expect(errorText.exists()).toBe(true);
@@ -119,21 +118,17 @@ describe('GRLineAllocationTable.vue', () => {
 
     // First enter invalid qty
     await qtyInput.setValue(lines[0].qtyOpenForGr + 1);
-    qtyInput.element.blur();
-    await wrapper.vm.$nextTick();
+    await qtyInput.trigger('blur');
 
     let errorText = wrapper.find('.error-text');
     expect(errorText.exists()).toBe(true);
 
     // Now enter valid qty
     await qtyInput.setValue(2);
-    qtyInput.element.blur();
-    await wrapper.vm.$nextTick();
+    await qtyInput.trigger('blur');
 
     errorText = wrapper.find('.error-text');
-    // The error should still show if it was not cleared, but let's check the logic
-    // Based on the component, if qtyReceived <= 0, it shows error. If 2, should be valid.
-    // Since 2 > 0 and 2 <= max, error should not show (or be null)
+    expect(errorText.exists()).toBe(false);
   });
 
   test('renders site code input field', () => {

@@ -52,7 +52,7 @@ test.describe('Goods Receipts module', () => {
     await page.locator('#notes').fill('Received in good condition, all items verified');
 
     // Enter receive quantity
-    const receiveQtyInput = page.locator('input[type="number"]').filter({ hasAttribute: 'max') }).first();
+    const receiveQtyInput = page.locator('input[type="number"][max]').first();
     const maxQty = await receiveQtyInput.getAttribute('max');
     const receiveQty = Math.min(2, Number(maxQty));
     await receiveQtyInput.fill(String(receiveQty));
@@ -89,7 +89,7 @@ test.describe('Goods Receipts module', () => {
     await expect(page.locator('table tbody tr').first()).toBeVisible();
 
     // Try to enter qty above max
-    const receiveQtyInput = page.locator('input[type="number"]').filter({ hasAttribute: 'max') }).first();
+    const receiveQtyInput = page.locator('input[type="number"][max]').first();
     const maxQty = Number(await receiveQtyInput.getAttribute('max'));
     const invalidQty = maxQty + 1;
 
@@ -132,7 +132,7 @@ test.describe('Goods Receipts module', () => {
 
     // Save as draft
     await page.locator('#receipt-date').fill('2026-09-03');
-    await page.locator('input[type="number"]').filter({ hasAttribute: 'max') }).first().fill('1');
+    await page.locator('input[type="number"][max]').first().fill('1');
     await page.getByRole('button', { name: 'Save as Draft' }).click();
     await page.waitForURL(/\/goods-receipts\/[0-9a-f-]+$/i);
 
@@ -198,7 +198,7 @@ test.describe('Goods Receipts module', () => {
 
     const receiveQty = '2';
     await page.locator('#receipt-date').fill('2026-09-03');
-    await page.locator('input[type="number"]').filter({ hasAttribute: 'max') }).first().fill(receiveQty);
+    await page.locator('input[type="number"][max]').first().fill(receiveQty);
 
     // Save and post
     await page.getByRole('button', { name: 'Create & Post Receipt' }).click();
