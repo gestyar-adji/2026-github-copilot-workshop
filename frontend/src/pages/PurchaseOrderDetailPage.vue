@@ -12,6 +12,7 @@
       </div>
       <div class="btn-group" v-if="purchaseOrder">
         <button v-if="purchaseOrder.status === 'DRAFT'" class="btn btn-primary" @click="submitPurchaseOrder">Submit PO</button>
+        <RouterLink v-if="canCreateGoodsReceipt" class="btn btn-primary" :to="`/goods-receipts/new/${purchaseOrder.id}`">Create GR</RouterLink>
       </div>
     </div>
 
@@ -74,13 +75,21 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { RouterLink, useRoute } from 'vue-router';
 import { api } from '../api';
 
 const route = useRoute();
 const purchaseOrder = ref(null);
 const errorMessage = ref('');
+
+const canCreateGoodsReceipt = computed(() =>
+  Boolean(
+    purchaseOrder.value &&
+      purchaseOrder.value.status === 'SUBMITTED' &&
+      purchaseOrder.value.lines.some((line) => line.qtyOpenForGr > 0)
+  )
+);
 
 async function load() {
   errorMessage.value = '';
